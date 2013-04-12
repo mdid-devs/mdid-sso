@@ -10,8 +10,9 @@ __________
 
 This is a fork of django-sso by pyro & namwood (http://codespatter.com/)
 
-From the original readme at https://code.google.com/p/django-sso/
+From the original readme at https://code.google.com/p/django-sso/:
 
+## django-sso
 
 django-sso will allow your django application to accept single sign on links from other applications and authenticate users. It is also capable of creating links to other applications that use SSO links.
 
