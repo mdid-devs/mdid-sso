@@ -4,18 +4,20 @@ Single Sign On Middleware fork for mdid3
 import string
 from random import Random
 import logging
-
 import ldap
 from django.http import HttpResponseRedirect
 from django.conf import settings
 from django.contrib.auth.models import User as User
 from django.contrib.sites.models import Site
-
 import sys
 import time
-from rooibos.auth import login as login
 from rooibos.auth.ldapauth import LdapAuthenticationBackend
 from util import generate_sso_token
+
+try:
+    from rooibos.auth import login as login
+except:
+    from django.contrib.auth import login
 
 
 class rooibos_LDAP(LdapAuthenticationBackend):
