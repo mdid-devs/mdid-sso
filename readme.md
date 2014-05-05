@@ -8,7 +8,9 @@
 
 1. ```git clone git@github.com:mdid-devs/mdid-sso.git apps/mdid-sso```
 
-1. You can either add these settings to settings_local.py:
+#### Then either:
+
+Add these settings to settings_local.py:
 
 ```python
 
@@ -30,9 +32,11 @@ sys.path.append('/var/local/mdid/rooibos/rooibos/apps/')
 
 ```
 
-1. Or you can edit mdid-sso/settings_sso.py & save as mdid-sso/settings_local.py
+#### OR:
 
-1. In this case, activate the app by adding the following to rooibos/settings_local.py:
+Edit mdid-sso/settings_sso.py & save as mdid-sso/settings_local.py
+
+In this case, activate the app by adding the following to rooibos/settings_local.py:
 
 ```python
 
