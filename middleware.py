@@ -1,18 +1,20 @@
 """
 Single Sign On Middleware fork for mdid3
 """
-import sys
 import string
-import time
-from django.http import HttpResponseRedirect
-from django.conf import settings
-from rooibos.auth import login as login
-from rooibos.auth.ldapauth import LdapAuthenticationBackend
-from django.contrib.auth.models import User as User
-from django.contrib.sites.models import Site
-import ldap
 from random import Random
 import logging
+
+import ldap
+from django.http import HttpResponseRedirect
+from django.conf import settings
+from django.contrib.auth.models import User as User
+from django.contrib.sites.models import Site
+
+import sys
+import time
+from rooibos.auth import login as login
+from rooibos.auth.ldapauth import LdapAuthenticationBackend
 from util import generate_sso_token
 
 
@@ -36,7 +38,7 @@ class rooibos_LDAP(LdapAuthenticationBackend):
 
                 # for cases where a bind user is needed (most places)
                 if ldap_auth.get('bind_user'):
-                #bind credential for lookup
+                    #bind credential for lookup
                     l.simple_bind(ldap_auth['bind_user'],
                                   ldap_auth.get('bind_password'))
                     #search for user to confirm
@@ -97,16 +99,17 @@ class rooibos_LDAP(LdapAuthenticationBackend):
                     user.last_name = ' '.join(attributes[ldap_auth['lastname']])
                     user.email = attributes[ldap_auth['email']][0]
                     user.save()
-                    logging.debug('SSO: creating user %s (%s %s (%s) from LDAP' % (user.id,
-                                                                                   user.first_name,
-                                                                                   user.last_name,
-                                                                                   user.email))
+                    logging.debug('SSO: created user %s (%s %s (%s) from LDAP' % (user.id,
+                                                                                  user.first_name,
+                                                                                  user.last_name,
+                                                                                  user.email))
                     return user
 
-                except:
+                except Exception as e:
+                    logging.debug('SSO: Exception %s' % e)
                     logging.debug('SSO: new_account_from_ldap failed due to', sys.exc_info()[0])
-                    raise
-            return None
+
+                    return None
 
 
 class SingleSignOnMiddleware(object):
@@ -137,20 +140,25 @@ class SingleSignOnMiddleware(object):
         token_id = request.GET.get('id', False)
         timestamp = request.GET.get('timestamp', False)
         if token and token_id and timestamp:
-            # logging.debug(
-            #     'SSO: user %s login attempt via SSO in with timestamp %s and token %s \n' % (
-            #         token_id, timestamp, token))
+            logging.debug('SSO: user %s login attempt via SSO in with timestamp %s and token %s \n' % (
+                token_id, timestamp, token))
             if self.check_token(token, token_id, timestamp):
                 # everything passed, authenticate user
-                #logging.debug('SSO: user %s token and timestamp pass \n' % token_id)
-                #logging.debug('SSO: Attempting to authenticate as %s \n' % token_id)
-                user = self.authenticate(token_id)
+                logging.debug('SSO: user %s token and timestamp pass \n' % token_id)
+                logging.debug('SSO: Attempting to authenticate as %s \n' % token_id)
+                try:
+                    user = self.authenticate(token_id)
+                except Exception as e:
+                    logging.debug('SSO: user %s does not exist, trying to create \n' % token_id)
+                    rooibos_LDAP.new_account_from_ldap(token_id)
+
                 if user.username == token_id:
                     try:
                         # THIS WAS THE KEY TO IT WORKING
                         user.backend = settings.SSO_BACKEND
                         login(request, user)
                         logging.debug('SSO: process_request - user.backend = %s' % user.backend)
+                        #return None
                         #logging.debug(user.last_login)
                         # logging.debug(request.session['_auth_user_id'])
                         # logging.debug(request.session['_auth_user_backend'])
@@ -202,22 +210,23 @@ class SingleSignOnMiddleware(object):
         try:
             if request.user.is_authenticated():
                 try:
-                    domains = settings.SSO_DOMAINS
-                    if domains:
-                        response.content = self.replace_domain_urls(response.content, domains)
+                    if settings.SSO_DOMAINS:
+                        response.content = self.replace_domain_urls(response.content, settings.SSO_DOMAINS)
                     else:
                         pass
-                except:
+                except Exception as e:
+                    logging.debug('SSO.process_response_subtry : %s ' % e)
                     pass
-        except:
+        except Exception as e:
             # in case request.user doesn't exist
-            logging.debug('user %s does not exist' % request.GET.get('id', False))
+            #logging.debug('user %s does not exist' % request.GET.get('id', False))
+            logging.debug('SSO.process_response : %s ' % e)
             pass
         return response
 
     def replace_domain_urls(self, content, domains):
         """
-        Replaces urls for domains specified and replaces them with
+        Replaces urls for domains specified and replaces them with 
         a url to the sso view that will generate a token and redirect
         """
         current_domain = Site.objects.get_current().domain

@@ -1,9 +1,8 @@
-import time
-
 from django.contrib.auth.decorators import login_required
 from django.contrib.sites.models import Site
 from django.http import HttpResponsePermanentRedirect
 
+import time
 from util import generate_sso_token
 
 @login_required
